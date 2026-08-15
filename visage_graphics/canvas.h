@@ -496,9 +496,15 @@ namespace visage {
       // takes nine arguments and this handed it eight. Like the const on Path::stroke, it could
       // only ever have been caught by someone calling this function, and nothing in the library
       // or its examples does.
+      //
+      // The stroke width is in the path's own units for the same reason. PathFillWrapper scales
+      // the finished outline by state_.scale, exactly as it does for fill(), so widening the path
+      // by a PIXEL width here scales that width a second time and draws every stroke state_.scale
+      // times too thick. Invisible at 100% DPI -- which is the only place this has ever run.
+      float stroke_units = pixels(stroke_width) / state_.scale;
       addShape(PathFillWrapper(state_.clamp, state_.brush, state_.x + pixels(x),
                                state_.y + pixels(y), pixels(width), pixels(height),
-                               path.stroke(pixels(stroke_width), join, end_cap, dash_array,
+                               path.stroke(stroke_units, join, end_cap, dash_array,
                                            dash_offset, miter_limit),
                                pathAtlas(), state_.scale));
     }
