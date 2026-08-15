@@ -399,9 +399,13 @@ namespace visage {
     SubPath singlePointOffset(Point point, float amount, EndCap end_cap);
     Path offset(float amount, Join join = Join::Square, EndCap end_cap = EndCap::Butt,
                 float miter_limit = kDefaultMiterLimit);
+    // const because Canvas::stroke() takes `const Path&` and calls this on it, so the two cannot
+    // both be right -- and Canvas::stroke() is the only way to stroke a path, so nothing in the
+    // library or its examples has ever instantiated it. The body only reads paths_ and builds a
+    // new Path, so const is what it always meant.
     Path stroke(float stroke_width, Join join = Join::Round, EndCap end_cap = EndCap::Round,
                 std::vector<float> dash_array = {}, float dash_offset = 0.0f,
-                float miter_limit = kDefaultMiterLimit);
+                float miter_limit = kDefaultMiterLimit) const;
 
     Path scaled(float mult) const {
       Path result = *this;

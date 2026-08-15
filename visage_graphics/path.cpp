@@ -517,7 +517,7 @@ namespace visage {
   }
 
   Path Path::stroke(float stroke_width, Join join, EndCap end_cap, std::vector<float> dash_array,
-                    float dash_offset, float miter_limit) {
+                    float dash_offset, float miter_limit) const {
     float dash_total = 0.0f;
     for (auto& dash : dash_array)
       dash_total += dash;

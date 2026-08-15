@@ -492,11 +492,15 @@ namespace visage {
       if (path.numPoints() == 0)
         return;
 
+      // pathAtlas() was missing here, which fill() a few lines up passes correctly -- the shape
+      // takes nine arguments and this handed it eight. Like the const on Path::stroke, it could
+      // only ever have been caught by someone calling this function, and nothing in the library
+      // or its examples does.
       addShape(PathFillWrapper(state_.clamp, state_.brush, state_.x + pixels(x),
                                state_.y + pixels(y), pixels(width), pixels(height),
                                path.stroke(pixels(stroke_width), join, end_cap, dash_array,
                                            dash_offset, miter_limit),
-                               state_.scale));
+                               pathAtlas(), state_.scale));
     }
 
     void saveState() { state_memory_.push_back(state_); }
