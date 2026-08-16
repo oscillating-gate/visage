@@ -353,7 +353,20 @@ namespace visage {
     font.size_ = size;
     font.dpi_scale_ = dpi_scale;
     font.native_size_ = std::round(size * (dpi_scale ? dpi_scale : 1.0f));
-    font.packed_font_ = FontCache::loadPackedFont(font.native_size_, packed_font_);
+
+    // A PackedFont IS a face at a rasterised size -- that pair is literally its cache key -- so
+    // when the rasterised size has not moved, the face already held is the answer and another
+    // reference to it is the whole job. Going round through the cache to arrive at the same
+    // pointer costs building that key, which is a concatenation and a std::to_string, and then
+    // several lookups in a map keyed by the resulting string.
+    //
+    // This is the common case rather than a corner of one: Canvas::text calls withDpiScale on
+    // every string it draws, and the DPI does not change between two strings in a frame.
+    if (font.native_size_ == native_size_ && packed_font_)
+      font.packed_font_ = FontCache::loadPackedFont(packed_font_);
+    else
+      font.packed_font_ = FontCache::loadPackedFont(font.native_size_, packed_font_);
+
     return font;
   }
 
@@ -544,7 +557,7 @@ namespace visage {
   PackedFont* FontCache::loadPackedFont(const PackedFont* packed_font) {
     if (packed_font == nullptr)
       return nullptr;
-    return instance()->incrementPackedFont(packed_font->id());
+    return instance()->incrementPackedFont(const_cast<PackedFont*>(packed_font));
   }
 
   PackedFont* FontCache::loadPackedFont(int size, const unsigned char* font_data, int data_size) {
@@ -557,6 +570,11 @@ namespace visage {
   PackedFont* FontCache::incrementPackedFont(const std::string& id) {
     ref_count_[cache_[id].get()]++;
     return cache_[id].get();
+  }
+
+  PackedFont* FontCache::incrementPackedFont(PackedFont* packed_font) {
+    ref_count_[packed_font]++;
+    return packed_font;
   }
 
   PackedFont* FontCache::createOrLoadPackedFont(const std::string& type_face_id, int size,
