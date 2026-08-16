@@ -96,6 +96,12 @@ namespace visage {
     Font withDpiScale(float dpi_scale) const;
     Font withSize(float size) const;
 
+  private:
+    // Shared by both: a new size or DPI over the typeface THIS font already holds.
+    Font fromTypeFace(float size, float dpi_scale) const;
+
+  public:
+
     int widthOverflowIndex(const char32_t* string, int string_length, float width,
                            bool round = false, int character_override = 0) const {
       return nativeWidthOverflowIndex(string, string_length, width * dpiScale(), round, character_override);
@@ -176,13 +182,20 @@ namespace visage {
     }
 
     static PackedFont* loadPackedFont(int size, const EmbeddedFile& font) {
-      std::string id = "embed: " + std::string(font.name) + " - " + std::to_string(size);
-      return instance()->createOrLoadPackedFont(id, size, font.data, font.size);
+      return instance()->createOrLoadPackedFont("embed: " + std::string(font.name), size,
+                                                font.data, font.size);
     }
 
     static PackedFont* loadPackedFont(int size, const std::string& file_path);
     static PackedFont* loadPackedFont(const PackedFont* packed_font);
     static PackedFont* loadPackedFont(int size, const unsigned char* font_data, int data_size);
+
+    // Re-size a typeface already in the cache. The identity of a typeface is expensive to work
+    // out from its bytes -- it means parsing the whole file through FreeType just to read the
+    // family and style names off it -- and an already-loaded PackedFont knows what it is, so
+    // this asks it instead. Font::withSize and Font::withDpiScale come through here, and the
+    // canvas calls withDpiScale once per text draw.
+    static PackedFont* loadPackedFont(int size, const PackedFont* type_face);
 
     static void returnPackedFont(PackedFont* packed_font) {
       instance()->decrementPackedFont(packed_font);
@@ -191,7 +204,9 @@ namespace visage {
     FontCache();
 
     PackedFont* incrementPackedFont(const std::string& id);
-    PackedFont* createOrLoadPackedFont(const std::string& id, int size,
+    // `type_face_id` names the FACE; the size is appended here to make the cache key, so every
+    // caller agrees on how a key is built and one of them can reuse a face's known identity.
+    PackedFont* createOrLoadPackedFont(const std::string& type_face_id, int size,
                                        const unsigned char* font_data, int data_size);
     void decrementPackedFont(PackedFont* packed_font);
     void removeStaleFonts();
