@@ -30,6 +30,20 @@ namespace visage {
 
   class Renderer : public Thread {
   public:
+    /** What the last submitted frame actually asked the GPU for.
+     *
+     * The renderer is the only thing that knows, and a caller trying to make a frame cheaper needs
+     * it: whether a frame costs because of the shapes in it or the number of separate submissions
+     * it takes to draw them are different problems with different fixes. debugInfo() reports the
+     * same figures as prose, which is fine for an overlay and useless to a profiler. */
+    struct FrameStats {
+      int draw_calls = 0;   // bgfx draw calls submitted
+      int views = 0;        // passes those were spread across
+      int blits = 0;
+      int triangles = 0;
+    };
+    static FrameStats frameStats();
+
     static Renderer& instance();
 
     Renderer();

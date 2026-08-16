@@ -70,6 +70,19 @@ namespace visage {
 #endif
   }
 
+  Renderer::FrameStats Renderer::frameStats() {
+    FrameStats result;
+    const bgfx::Stats* stats = bgfx::getStats();
+    if (stats == nullptr)
+      return result;
+
+    result.draw_calls = static_cast<int>(stats->numDraw);
+    result.views = static_cast<int>(stats->numViews);
+    result.blits = static_cast<int>(stats->numBlit);
+    result.triangles = static_cast<int>(stats->numPrims[bgfx::Topology::TriList]);
+    return result;
+  }
+
   Renderer& Renderer::instance() {
     static Renderer renderer;
     return renderer;
