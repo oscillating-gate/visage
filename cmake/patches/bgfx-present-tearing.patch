@@ -1,0 +1,26 @@
+﻿diff --git a/src/renderer_d3d11.cpp b/src/renderer_d3d11.cpp
+index 66e5eb73c..7a30bc3aa 100644
+--- a/src/renderer_d3d11.cpp
++++ b/src/renderer_d3d11.cpp
+@@ -5287,7 +5287,20 @@ namespace bgfx { namespace d3d11
+ 	{
+ 		if (m_needPresent)
+ 		{
+-			HRESULT hr = m_swapChain->Present(_syncInterval, 0);
++			// An additional window's swap chain is created with the same
++			// DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING as the primary one, but presented without
++			// DXGI_PRESENT_ALLOW_TEARING -- so at syncInterval 0 it still waits for the vertical
++			// blank where the primary one, a few lines up in flip(), does not.
++			//
++			// The wait is paid by whichever thread called bgfx::frame(), and an application with
++			// several windows pays it once per window per frame on that one thread.
++			uint32_t presentFlags = 0;
++			if (!_syncInterval && s_renderD3D11->m_dxgi.tearingSupported() )
++			{
++				presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
++			}
++
++			HRESULT hr = m_swapChain->Present(_syncInterval, presentFlags);
+ 			hr = !isLost(hr) ? S_OK : hr;
+ 			m_needPresent = false;
+ 			return hr;

@@ -60,9 +60,19 @@ endif ()
 
 message(STATUS "VISAGE: Downloading graphics dependencies")
 set(CMAKE_MESSAGE_LOG_LEVEL "ERROR")
+# bgfx is fetched rather than vendored, so the one change this needs lives as a patch beside this
+# file. It stops an additional window's Present from waiting for the vertical blank when nothing
+# asked it to sync -- read the patch for the rest. It matters for an application that has many
+# windows on one thread, which is what an audio plugin with several editors open is, and without it
+# the host's UI thread stalls long enough to stop answering input.
+#
+# ⚠ PATCH_COMMAND runs when the dependency is POPULATED. A build tree that already fetched bgfx
+# keeps the unpatched copy: delete <build>/_deps/bgfx-* and reconfigure.
 FetchContent_Declare(bgfx GIT_REPOSITORY https://github.com/bkaradzic/bgfx.cmake.git
   GIT_SHALLOW TRUE
   GIT_TAG v1.129.8958-499
+  PATCH_COMMAND git -C bgfx apply --ignore-whitespace
+                "${CMAKE_CURRENT_LIST_DIR}/../cmake/patches/bgfx-present-tearing.patch"
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(bgfx)
