@@ -97,6 +97,9 @@ namespace visage {
     old_brushes_.clear();
     old_brushes_ = std::move(brushes_);
 
+    ++brush_frame_;
+    sweepSolidBrushes();
+
     if (backdrop_effect_) {
       Point point;
       Region* parent = this;

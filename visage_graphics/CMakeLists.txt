@@ -67,12 +67,15 @@ set(CMAKE_MESSAGE_LOG_LEVEL "ERROR")
 # the host's UI thread stalls long enough to stop answering input.
 #
 # ⚠ PATCH_COMMAND runs when the dependency is POPULATED. A build tree that already fetched bgfx
-# keeps the unpatched copy: delete <build>/_deps/bgfx-* and reconfigure.
+# keeps the unpatched copy until <build>/_deps/bgfx-* is deleted and cmake is re-run. Applying it
+# is a no-op where it is already applied, so a re-populate does not fail.
 FetchContent_Declare(bgfx GIT_REPOSITORY https://github.com/bkaradzic/bgfx.cmake.git
   GIT_SHALLOW TRUE
   GIT_TAG v1.129.8958-499
-  PATCH_COMMAND git -C bgfx apply --ignore-whitespace
-                "${CMAKE_CURRENT_LIST_DIR}/../cmake/patches/bgfx-present-tearing.patch"
+  PATCH_COMMAND ${CMAKE_COMMAND}
+                "-DPATCH_FILE=${CMAKE_CURRENT_LIST_DIR}/../cmake/patches/bgfx-present-tearing.patch"
+                "-DPATCH_DIR=<SOURCE_DIR>/bgfx"
+                -P "${CMAKE_CURRENT_LIST_DIR}/../cmake/apply-patch.cmake"
   EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(bgfx)
