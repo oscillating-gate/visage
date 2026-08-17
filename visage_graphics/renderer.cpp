@@ -23,6 +23,7 @@
 
 #include "visage_utils/string_utils.h"
 
+#include <algorithm>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
@@ -70,6 +71,15 @@ namespace visage {
 #endif
   }
 
+  void Renderer::setProfiling(bool profiling) {
+    static bool current = false;
+    if (current == profiling)
+      return;
+
+    current = profiling;
+    bgfx::setDebug(profiling ? BGFX_DEBUG_PROFILER : BGFX_DEBUG_NONE);
+  }
+
   Renderer::FrameStats Renderer::frameStats() {
     FrameStats result;
     const bgfx::Stats* stats = bgfx::getStats();
@@ -80,6 +90,27 @@ namespace visage {
     result.views = static_cast<int>(stats->numViews);
     result.blits = static_cast<int>(stats->numBlit);
     result.triangles = static_cast<int>(stats->numPrims[bgfx::Topology::TriList]);
+
+    if (stats->gpuTimerFreq > 0) {
+      const double to_ms = 1000.0 / static_cast<double>(stats->gpuTimerFreq);
+      result.gpu_ms = static_cast<double>(stats->gpuTimeEnd - stats->gpuTimeBegin) * to_ms;
+
+      const int views = std::min<int>(stats->numViews, FrameStats::kMaxViewTimes);
+      for (int i = 0; i < views; ++i) {
+        const bgfx::ViewStats& view = stats->viewStats[i];
+        result.view_ms[i] = static_cast<double>(view.gpuTimeEnd - view.gpuTimeBegin) * to_ms;
+
+        int c = 0;
+        for (; c < FrameStats::kViewNameLength - 1 && view.name[c]; ++c)
+          result.view_name[i][c] = view.name[c];
+        result.view_name[i][c] = '\0';
+      }
+      result.view_times = views;
+    }
+
+    if (stats->cpuTimerFreq > 0)
+      result.cpu_frame_ms = static_cast<double>(stats->cpuTimeFrame) * 1000.0 / stats->cpuTimerFreq;
+
     return result;
   }
 

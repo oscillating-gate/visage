@@ -314,6 +314,9 @@ namespace visage {
     std::vector<PositionedBatch> batches;
     std::vector<RegionPosition> done_regions;
 
+    // Named so a GPU profile reads as the drawing rather than as a list of numbers: bgfx reports
+    // per-view times under whatever name the view was given, and a frame here is a dozen passes.
+    bgfx::setViewName(submit_pass, window_handle_ ? "composite" : "layer");
     bgfx::setViewMode(submit_pass, bgfx::ViewMode::Sequential);
     bgfx::setViewRect(submit_pass, 0, 0, width_, height_);
 

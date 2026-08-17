@@ -1,4 +1,4 @@
-/* Copyright Vital Audio, LLC
+﻿/* Copyright Vital Audio, LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -250,6 +250,8 @@ namespace visage {
       setPostEffectUniform<Uniforms::kPixelSize>(1.0f / last_width, 1.0f / last_height);
       bgfx::setIndexBuffer(handles_->screen_index_buffer);
 
+      bgfx::setViewName(submit_pass, "bloom");
+
       bgfx::setViewFrameBuffer(submit_pass, destination);
       bgfx::setViewRect(submit_pass, 0, 0, downsample_width, downsample_height);
 
@@ -273,6 +275,7 @@ namespace visage {
     setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
 
     bgfx::setIndexBuffer(handles_->screen_index_buffer);
+    bgfx::setViewName(submit_pass, "bloom");
     bgfx::setViewFrameBuffer(submit_pass, handles_->downsample_buffers2[downsample_stages_]);
     bgfx::setViewRect(submit_pass, 0, 0, last_width, last_height);
     setPostEffectUniform<Uniforms::kPixelSize>(transition / last_width, 0.0f);
@@ -285,6 +288,7 @@ namespace visage {
     setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
 
     bgfx::setIndexBuffer(handles_->screen_index_buffer);
+    bgfx::setViewName(submit_pass, "bloom");
     bgfx::setViewFrameBuffer(submit_pass, handles_->downsample_buffers1[downsample_stages_]);
     bgfx::setViewRect(submit_pass, 0, 0, last_width, last_height);
     setPostEffectUniform<Uniforms::kPixelSize>(0.0f, transition / last_height);
@@ -301,6 +305,7 @@ namespace visage {
                                                       dest_height * 0.5f / heights_[i]);
       setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
       bgfx::setIndexBuffer(handles_->screen_index_buffer);
+      bgfx::setViewName(submit_pass, "bloom");
       bgfx::setViewFrameBuffer(submit_pass, handles_->downsample_buffers1[i - 1]);
       bgfx::setViewRect(submit_pass, 0, 0, dest_width, dest_height);
 
@@ -370,6 +375,7 @@ namespace visage {
     setPostEffectTexture<Uniforms::kTexture>(0, bgfx::getTexture(region->layer()->frameBuffer()));
 
     bgfx::setIndexBuffer(handles_->screen_index_buffer);
+    bgfx::setViewName(submit_pass, "bloom");
     bgfx::setViewFrameBuffer(submit_pass, handles_->downsample_buffers1[1]);
     bgfx::setViewRect(submit_pass, 0, 0, widths_[1], heights_[1]);
     float mult_val = hdr_range * bloom_intensity_;
@@ -394,6 +400,8 @@ namespace visage {
       setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
       setPostEffectUniform<Uniforms::kResampleValues>(x_downsample_scale, y_downsample_scale);
 
+      bgfx::setViewName(submit_pass, "bloom");
+
       bgfx::setViewFrameBuffer(submit_pass, destination);
       bgfx::setViewRect(submit_pass, 0, 0, downsample_width, downsample_height);
 
@@ -404,6 +412,7 @@ namespace visage {
       setPostEffectTexture<Uniforms::kTexture>(0, bgfx::getTexture(destination));
       setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
       bgfx::setIndexBuffer(handles_->screen_index_buffer);
+      bgfx::setViewName(submit_pass, "bloom");
       bgfx::setViewFrameBuffer(submit_pass, handles_->downsample_buffers2[i + 1]);
       bgfx::setViewRect(submit_pass, 0, 0, downsample_width, downsample_height);
       setPostEffectUniform<Uniforms::kPixelSize>(1.0f / downsample_width);
@@ -416,6 +425,7 @@ namespace visage {
       setPostEffectTexture<Uniforms::kTexture>(0, bgfx::getTexture(handles_->downsample_buffers2[i + 1]));
       setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
       bgfx::setIndexBuffer(handles_->screen_index_buffer);
+      bgfx::setViewName(submit_pass, "bloom");
       bgfx::setViewFrameBuffer(submit_pass, destination);
       bgfx::setViewRect(submit_pass, 0, 0, downsample_width, downsample_height);
       setPostEffectUniform<Uniforms::kPixelSize>(0.0f, 1.0f / downsample_height);
@@ -439,6 +449,7 @@ namespace visage {
       setPostEffectUniform<Uniforms::kMult>(2.0f, 2.0f, 2.0f, 1.0f);
       setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
       bgfx::setIndexBuffer(handles_->screen_index_buffer);
+      bgfx::setViewName(submit_pass, "bloom");
       bgfx::setViewFrameBuffer(submit_pass, destination);
       bgfx::setViewRect(submit_pass, 0, 0, dest_width, dest_height);
 

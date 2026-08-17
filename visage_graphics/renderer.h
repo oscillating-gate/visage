@@ -37,12 +37,30 @@ namespace visage {
      * it takes to draw them are different problems with different fixes. debugInfo() reports the
      * same figures as prose, which is fine for an overlay and useless to a profiler. */
     struct FrameStats {
+      static constexpr int kMaxViewTimes = 24;
+      static constexpr int kViewNameLength = 16;
+
       int draw_calls = 0;   // bgfx draw calls submitted
       int views = 0;        // passes those were spread across
       int blits = 0;
       int triangles = 0;
+
+      // What the GPU actually spent, which no amount of CPU profiling can reach. Milliseconds,
+      // from bgfx's own timer queries: gpu_ms is the whole frame, view_ms breaks it up by pass --
+      // and a pass IS a step of the drawing: the layers, the post effect, the composite, in the
+      // order they were submitted.
+      double gpu_ms = 0.0;
+      double cpu_frame_ms = 0.0;   // bgfx's own frame-to-frame wall, for scale
+      int view_times = 0;
+      double view_ms[kMaxViewTimes] = {};
+      char view_name[kMaxViewTimes][kViewNameLength] = {};
     };
     static FrameStats frameStats();
+
+    /// Per-pass GPU times, which bgfx only gathers while its profiler flag is set. Costs a pair of
+    /// GPU timer queries per view, so it is asked for rather than assumed -- and gpu_ms is
+    /// available either way, it is only the per-view breakdown that needs this.
+    static void setProfiling(bool profiling);
 
     static Renderer& instance();
 
