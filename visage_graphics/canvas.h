@@ -589,6 +589,38 @@ namespace visage {
       state_.current_region = region;
     }
 
+    // beginRegion for a region this frame has already visited, and with the region's own origin
+    // subtracted so the caller can go on drawing in window coordinates.
+    //
+    // TWO THINGS DIFFER FROM beginRegion AND BOTH ARE THE POINT.
+    //
+    // It does not clear(). beginRegion assumes a region is entered once and filled in one go, which
+    // is true of Visage's own Frame tree: a frame owns its region and draws all of itself. A host
+    // that splits ONE flat list of controls across several regions enters each of them many times
+    // per frame -- once per control, in whatever order the controls come in -- and clear() on the
+    // second visit throws away everything the first one drew.
+    //
+    // And it offsets. beginRegion puts the drawing origin at the region's top-left, which is right
+    // when the caller's coordinates are already local to it. A host whose controls know only window
+    // coordinates needs the region's position taken back out, and state_.x is exactly a translation
+    // added to every shape -- so this is the whole of it.
+    //
+    // The caller is responsible for clearing every region once at the start of the frame, and for
+    // keeping shapes inside the region's own rectangle: regions are packed into a shared layer
+    // texture (Layer::addPackedRegion), so a shape that escapes its bounds lands in whatever else
+    // is packed beside it.
+    void resumeRegion(Region* region, float origin_x, float origin_y) {
+      saveState();
+      state_.x = 0;
+      state_.y = 0;
+      setLogicalPixelScale();
+      state_.brush = nullptr;
+      state_.blend_mode = BlendMode::Alpha;
+      setClampBounds(0, 0, region->width(), region->height());
+      state_.current_region = region;
+      setPosition(-origin_x, -origin_y);
+    }
+
     void endRegion() { restoreState(); }
 
     void setPalette(Palette* palette) { palette_ = palette; }
