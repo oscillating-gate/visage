@@ -35,6 +35,7 @@
 #include "visage_utils/space.h"
 #include "visage_utils/time_utils.h"
 
+#include <cmath>
 #include <limits>
 
 namespace visage {
@@ -422,7 +423,21 @@ namespace visage {
     template<typename T1, typename T2, typename T3, typename T4>
     void text(Text* text, const T1& x, const T2& y, const T3& width, const T4& height,
               Direction dir = Direction::Up) {
-      TextBlock text_block(state_.clamp, state_.brush, state_.x + pixels(x), state_.y + pixels(y),
+      // SNAPPED TO WHOLE PIXELS, and this is the only place that can do it.
+      //
+      // A glyph is a quad cut from the atlas and sampled with a linear filter (submitText builds
+      // it as left = x + quad.x - 0.5 against texture_x = atlas_left - 0.5). Under that mapping a
+      // destination pixel centre reads exactly one texel centre -- crisp -- if and only if the
+      // quad's origin is a whole number of pixels. Half a pixel resamples every glyph of the run
+      // across two texels, and that is the soft, thickened look.
+      //
+      // state_.x + pixels(x) is ALREADY in pixels -- state_.scale is folded into both terms -- so
+      // the rounding belongs here and not in the caller's units. A caller working in logical
+      // coordinates cannot know where a 1.5x DPI puts them, and half of its integers land on
+      // halves. Width and height are NOT rounded: they are the box the justification measures
+      // against rather than a position, and Font::setVertexPositions rounds the pen it derives.
+      TextBlock text_block(state_.clamp, state_.brush,
+                           std::round(state_.x + pixels(x)), std::round(state_.y + pixels(y)),
                            pixels(width), pixels(height), text,
                            text->font().withDpiScale(state_.scale), dir);
       addShape(std::move(text_block));

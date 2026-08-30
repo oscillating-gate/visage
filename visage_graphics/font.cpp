@@ -419,14 +419,23 @@ namespace visage {
     if (length <= 0)
       return;
 
+    // THE PEN LANDS ON A WHOLE PIXEL, all three ways. Advances and bearings are integers already
+    // -- FreeType grid-fits the one and the atlas holds bitmaps for the other -- so once the pen
+    // is whole every glyph after it is too, and each quad samples the atlas one texel to one
+    // pixel. Centring is the case that bites: (width - string_width) * 0.5 is half a pixel
+    // whenever the two widths differ in parity, which is half of all strings, at random.
+    //
+    // Vertically there is nothing to do here. pen_y is an integer offset from y in all three
+    // branches (the truncations are deliberate), and y itself arrives whole -- from a rounded
+    // TextBlock origin, or from the int line_y of setMultiLineVertexPositions.
     float string_width = nativeStringWidth(text, length, character_override);
-    float pen_x = x + (width - string_width) * 0.5f;
+    float pen_x = std::round(x + (width - string_width) * 0.5f);
     float pen_y = y + static_cast<int>((height + nativeCapitalHeight()) * 0.5f);
 
     if (justification & kLeft)
-      pen_x = x;
+      pen_x = std::round(x);
     else if (justification & kRight)
-      pen_x = x + width - string_width;
+      pen_x = std::round(x + width - string_width);
 
     if (justification & kTop)
       pen_y = y + static_cast<int>((nativeCapitalHeight() + nativeLineHeight()) * 0.5f);
