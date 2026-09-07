@@ -1,4 +1,4 @@
-/* Copyright Vital Audio, LLC
+﻿/* Copyright Vital Audio, LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -402,6 +402,32 @@ namespace visage {
     void encode(std::ostringstream& stream) const;
     void decode(const std::string& data);
     void decode(std::istringstream& stream);
+
+    // The same gradient, moved.
+    //
+    // ⚠ A SHAPE'S POSITION AND ITS BRUSH'S POSITION ARE SET IN TWO PLACES, AND ONLY ONE OF THEM WAS
+    // EVER TRANSLATED. Every shape is added at state_.x + pixels(x); Canvas::setBrush passed
+    // brush.position() through with the scale applied and nothing else. For Visage's own Frame tree
+    // that is invisible, because beginRegion leaves state_.x at zero and a frame's gradient shares
+    // an origin with its shapes. A host that draws several regions of ONE window in window
+    // coordinates is a different matter: resumeRegion subtracts the region's origin from every
+    // shape -- that is what it is for -- and an untranslated gradient stays where the window put it.
+    //
+    // Measured in CurveSeq (ClickUp 86eyur3ad): the comet trail behind a playhead came out as a
+    // FLAT BAND of the head's colour in the left-hand curve cells, whose region origin is slightly
+    // negative so the shape landed past the end of the gradient and clamped to its last stop -- and
+    // as NOTHING AT ALL in the right-hand cells 460px away, where the shape landed before the start
+    // and clamped to a stop whose alpha is zero. One bug wearing two faces, and the second face is
+    // the one that got reported.
+    //
+    // Only the two points move: the radial coefficients are in units of 1/radius^2 and a
+    // translation does not touch a radius.
+    GradientPosition translated(const Point& offset) const {
+      GradientPosition result = *this;
+      result.point1 += offset;
+      result.point2 += offset;
+      return result;
+    }
 
     GradientPosition operator*(float mult) const {
       GradientPosition result = *this;

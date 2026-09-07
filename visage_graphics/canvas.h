@@ -1,4 +1,4 @@
-/* Copyright Vital Audio, LLC
+﻿/* Copyright Vital Audio, LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -155,8 +155,12 @@ namespace visage {
     void setBrush(const Brush& brush) {
       brushStats().note(brush);
       state_.set_brush = brush;
-      state_.brush = state_.current_region->addBrush(&gradient_atlas_, brush.gradient(),
-                                                     brush.position() * state_.scale);
+      // ⚠ TRANSLATED BY THE CANVAS POSITION, exactly as a shape's coordinates are. Without this a
+      // gradient ignores resumeRegion's origin and lands somewhere else than the shape it fills.
+      // See GradientPosition::translated for the measurement.
+      state_.brush = state_.current_region->addBrush(
+        &gradient_atlas_, brush.gradient(),
+        (brush.position() * state_.scale).translated({ state_.x, state_.y }));
     }
     void setColor(const Brush& brush) { setBrush(brush); }
     void setColor(unsigned int color) { setBrush(Brush::solid(color)); }
