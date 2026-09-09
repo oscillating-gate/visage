@@ -382,8 +382,17 @@ namespace visage {
     setPostEffectUniform<Uniforms::kMult>(mult_val, mult_val, mult_val, 1.0f);
     float hdr_mult = hdr() ? kHdrColorMultiplier : 1.0f;
     setPostEffectUniform<Uniforms::kThreshold>(hdr_mult);
+    // One texel of the layer being read, which is what the thirteen taps are spaced by.
+    setPostEffectUniform<Uniforms::kPixelSize>(1.0f / region->layer()->width(),
+                                               1.0f / region->layer()->height());
 
-    bgfx::submit(submit_pass, ProgramCache::programHandle(shaders::vs_sample, shaders::fs_mult_threshold));
+    // ⚠ NOT fs_mult_threshold. One bilinear tap per half-resolution destination lets the grid
+    // decide how much of a thin source clears the threshold, so a source travelling across that
+    // grid makes the halo breathe. fs_threshold_downsample thresholds each of thirteen taps and
+    // then averages, which keeps the overshoot a property of the source rather than of where it
+    // happens to be standing. See the account in the shader. (CurveSeq 86eyutup6.)
+    bgfx::submit(submit_pass, ProgramCache::programHandle(shaders::vs_sample,
+                                                          shaders::fs_threshold_downsample));
     submit_pass++;
 
     bgfx::FrameBufferHandle source = handles_->downsample_buffers1[1];
@@ -399,13 +408,22 @@ namespace visage {
       bgfx::setIndexBuffer(handles_->screen_index_buffer);
       setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
       setPostEffectUniform<Uniforms::kResampleValues>(x_downsample_scale, y_downsample_scale);
+      // One texel of the SOURCE, which is what the thirteen taps are spaced by. The buffers are
+      // created at exactly widths_[i] x heights_[i] and clamped at the edges (checkBuffers), so a
+      // tap that reaches past the used area repeats the border rather than reading anything stale.
+      setPostEffectUniform<Uniforms::kPixelSize>(1.0f / widths_[i], 1.0f / heights_[i]);
 
       bgfx::setViewName(submit_pass, "bloom");
 
       bgfx::setViewFrameBuffer(submit_pass, destination);
       bgfx::setViewRect(submit_pass, 0, 0, downsample_width, downsample_height);
 
-      bgfx::submit(submit_pass, ProgramCache::programHandle(shaders::vs_sample, shaders::fs_sample));
+      // ⚠ NOT fs_sample. A single bilinear tap samples the level being halved so sparsely that the
+      // coarse levels change as a small source crosses their grid, and since the upsample adds
+      // those levels back, the halo breathes -- light moves between a source and the gaps around
+      // it while the total stays put, which reads as a very fine flicker and is worse the more
+      // levels there are. See the account in fs_downsample.sc. (CurveSeq 86eyutup6.)
+      bgfx::submit(submit_pass, ProgramCache::programHandle(shaders::vs_sample, shaders::fs_downsample));
       submit_pass++;
 
       setBlendMode(BlendMode::Opaque);
@@ -447,13 +465,19 @@ namespace visage {
       setPostEffectUniform<Uniforms::kResampleValues>(dest_width * 0.5f / widths_[i + 1],
                                                       dest_height * 0.5f / heights_[i + 1]);
       setPostEffectUniform<Uniforms::kMult>(2.0f, 2.0f, 2.0f, 1.0f);
+      // One texel of the level being magnified, for the tent's nine taps.
+      setPostEffectUniform<Uniforms::kPixelSize>(1.0f / widths_[i + 1], 1.0f / heights_[i + 1]);
       setScreenVertexBuffer(region->layer()->bottomLeftOrigin());
       bgfx::setIndexBuffer(handles_->screen_index_buffer);
       bgfx::setViewName(submit_pass, "bloom");
       bgfx::setViewFrameBuffer(submit_pass, destination);
       bgfx::setViewRect(submit_pass, 0, 0, dest_width, dest_height);
 
-      bgfx::submit(submit_pass, ProgramCache::programHandle(shaders::vs_sample, shaders::fs_mult));
+      // The other half of it: a bilinear magnify reconstructs the coarse level as patches whose
+      // seams are locked to the coarse grid, so the shape changes as the source crosses that grid
+      // even when the level itself is smooth. The tent is normalised, so u_mult still means what
+      // it meant. See fs_upsample.sc.
+      bgfx::submit(submit_pass, ProgramCache::programHandle(shaders::vs_sample, shaders::fs_upsample));
       submit_pass++;
     }
 
