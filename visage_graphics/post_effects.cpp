@@ -369,6 +369,21 @@ namespace visage {
     stages = std::max(1.0f, std::min(stages, kMaxDownsamples + 0.99f));
     downsamples_ = stages;
 
+    // The fraction the floor above throws away. Running one stage more and adding that level in at
+    // the fraction's weight makes the reach continuous in the size: at a fraction of 0 the extra
+    // level is not built and the passes are exactly the whole-stage ones, and as the fraction goes
+    // to 1 the weight goes to the full gain the next stage would add on its own. Linear in the
+    // fraction, so the light the halo adds is continuous and monotone in log2(size). (CurveSeq
+    // 86eyt3czt: a UI scale between powers of two was left on the nearest whole stage.)
+    top_weight_ = 1.0f;
+    if (continuous_size_ && bloom_size_ >= 1.0f && downsamples_ < kMaxDownsamples) {
+      float fraction = bloom_size_ - std::floor(bloom_size_);
+      if (fraction > 0.0f) {
+        downsamples_ += 1;
+        top_weight_ = fraction;
+      }
+    }
+
     setBlendMode(BlendMode::Opaque);
     setInitialVertices(region);
     setPostEffectUniform<Uniforms::kResampleValues>(1.0f, 1.0f);
@@ -464,7 +479,9 @@ namespace visage {
       setPostEffectTexture<Uniforms::kTexture>(0, bgfx::getTexture(handles_->downsample_buffers1[i + 1]));
       setPostEffectUniform<Uniforms::kResampleValues>(dest_width * 0.5f / widths_[i + 1],
                                                       dest_height * 0.5f / heights_[i + 1]);
-      setPostEffectUniform<Uniforms::kMult>(2.0f, 2.0f, 2.0f, 1.0f);
+      // The per-level gain, and for the coarsest level of a fractional size, the fraction of it.
+      float level_gain = 2.0f * (i == downsamples_ - 1 ? top_weight_ : 1.0f);
+      setPostEffectUniform<Uniforms::kMult>(level_gain, level_gain, level_gain, 1.0f);
       // One texel of the level being magnified, for the tent's nine taps.
       setPostEffectUniform<Uniforms::kPixelSize>(1.0f / widths_[i + 1], 1.0f / heights_[i + 1]);
       setScreenVertexBuffer(region->layer()->bottomLeftOrigin());

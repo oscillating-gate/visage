@@ -98,12 +98,19 @@ namespace visage {
 
     void setBloomSize(float size) { bloom_size_ = std::log2(std::max(1.0f, size)); }
     void setBloomIntensity(float intensity) { bloom_intensity_ = intensity; }
+    // Off (the default), the size buys whole downsample stages: log2 of it is floored, so the reach
+    // only moves at powers of two. On, the fraction runs one stage more and adds that coarsest level
+    // in at the fraction's weight, so the reach follows the size continuously. A size that is an
+    // exact power of two draws the same passes either way.
+    void setContinuousSize(bool continuous) { continuous_size_ = continuous; }
 
   private:
     float bloom_size_ = 0.0f;
     float bloom_intensity_ = 1.0f;
+    bool continuous_size_ = false;
 
     int downsamples_ = 0;
+    float top_weight_ = 1.0f;  // the coarsest level's share when the size falls between stages
 
     VISAGE_LEAK_CHECKER(BloomPostEffect)
   };
