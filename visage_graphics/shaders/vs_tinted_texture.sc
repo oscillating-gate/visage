@@ -16,7 +16,12 @@ void main() {
   v_gradient_texture_pos = a_color0;
   v_gradient_pos = a_color1;
   v_gradient_pos2 = a_color2;
-  vec2 rotated_delta = a_texcoord0.z * delta + a_texcoord0.w * delta.yx;
+  // What the clamp took off the quad, moved into the texture the way the quad is turned:
+  // (z, w) = (cos, sin) of the turn. A quarter turn maps the screen's (dx, dy) to the texture's
+  // (dy, -dx) clockwise (w = 1) and (-dy, dx) anticlockwise (w = -1); delta.yx had the second
+  // component's sign wrong for both, so a turned glyph cut on the screen's x read the texture's
+  // y backwards -- its atlas neighbours' rows -- as stray strokes through the word.
+  vec2 rotated_delta = a_texcoord0.z * delta + a_texcoord0.w * vec2(delta.y, -delta.x);
   v_coordinates = (a_texcoord0.xy + rotated_delta) * u_atlas_scale.xy;
   vec2 adjusted_position = clamped * u_bounds.xy + u_bounds.zw;
   gl_Position = vec4(adjusted_position, 0.5, 1.0);
