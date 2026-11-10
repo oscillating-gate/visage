@@ -78,6 +78,7 @@ namespace visage {
     init.display = display_;
     init.wayland = wayland_display_;
     init.color_managed = color_managed_;
+    init.vsync = vsync_;
 #if VISAGE_GRAPHICS_DEBUG_LOGGING
     init.debug = true;
     init.log_callback = [](const char* message) { VISAGE_LOG(message); };

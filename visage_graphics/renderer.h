@@ -65,6 +65,8 @@ namespace visage {
     bool floatRenderTargetsSupported() const { return float_render_targets_supported_; }
     void setColorManaged(bool color_managed) { color_managed_ = color_managed; }
     bool colorManaged() const { return color_managed_; }
+    void setVsync(bool vsync) { vsync_ = vsync; }
+    bool vsync() const { return vsync_; }
     bool initialized() const { return initialized_; }
     void* display() const { return display_; }
 
@@ -82,6 +84,7 @@ namespace visage {
     bool swap_chain_supported_ = false;
     bool float_render_targets_supported_ = false;
     bool color_managed_ = true;
+    bool vsync_ = true;
 
     Screenshot screenshot_;
     std::string error_message_;
