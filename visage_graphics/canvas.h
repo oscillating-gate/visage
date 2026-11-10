@@ -110,8 +110,55 @@ namespace visage {
 
     void setBlendMode(BlendMode blend_mode) { state_.blend_mode = blend_mode; }
 
+    // How many brushes a frame packs, and how few distinct ones they really are.
+    //
+    // Every shape sets a brush, and every setBrush allocates a PackedBrush and looks the gradient
+    // up in the atlas. Whether that is worth caching depends entirely on how many distinct brushes
+    // a frame actually uses, which is a fact about the drawing rather than something to reason out
+    // -- hence the counter. Linear over a small table because the answer it exists to establish
+    // is whether that table is small.
+    struct BrushStats {
+      static constexpr int kMaxTracked = 1024;
+
+      // OFF unless something is profiling. Counting distinct colours means scanning what has been
+      // seen so far, which at a hundred-odd colours and four hundred calls a frame is percentage
+      // points of the frame -- affordable while measuring, not affordable in a plugin that is not.
+      bool enabled = false;
+
+      int calls = 0;     // setBrush calls this frame
+      int solid = 0;     // of those, single-colour brushes
+      int distinct = 0;  // distinct solid colours, saturating at kMaxTracked
+      Color tracked[kMaxTracked];
+
+      void reset() { calls = solid = distinct = 0; }
+
+      void note(const Brush& brush) {
+        if (!enabled)
+          return;
+
+        ++calls;
+        if (brush.gradient().numColors() != 1)
+          return;
+
+        ++solid;
+        const Color& color = brush.gradient().colors()[0];
+        for (int i = 0; i < distinct; ++i) {
+          if (Color::compare(tracked[i], color) == 0)
+            return;
+        }
+        if (distinct < kMaxTracked)
+          tracked[distinct++] = color;
+      }
+    };
+
+    static BrushStats& brushStats() {
+      static BrushStats stats;
+      return stats;
+    }
+
     const Brush& brush() { return state_.set_brush; }
     void setBrush(const Brush& brush) {
+      brushStats().note(brush);
       state_.set_brush = brush;
       GradientPosition position = brush.position() * state_.scale;
       position = position.transformed(Transform::translation(state_.x, state_.y));
@@ -550,6 +597,7 @@ namespace visage {
     }
 
     void beginRegion(Region* region) {
+      brushStats().reset();
       region->clear();
       saveState();
       state_.x = 0;
