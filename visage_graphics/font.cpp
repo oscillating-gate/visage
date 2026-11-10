@@ -26,6 +26,8 @@
 #include "visage_utils/file_system.h"
 #include "visage_utils/thread_utils.h"
 
+#include <array>
+#include <cmath>
 #include <freetype/freetype.h>
 #include <set>
 #include <vector>
@@ -177,6 +179,24 @@ namespace visage {
       }
     }
 
+    // Glyph coverage, gamma-corrected on its way into the atlas.
+    //
+    // FreeType returns linear coverage, and blending that over a dark background leaves light text
+    // visibly thinner than the same face at the same size through Skia, which applies a contrast
+    // curve to its masks by default. The whole difference is in the mid-tones -- the stems of a small
+    // label stop at mid grey instead of reaching near white -- so one power curve closes it.
+    // Asymmetric in principle: it fattens dark-on-light as well, where Skia's table backs off, hence
+    // a modest exponent rather than a faithful one.
+    static unsigned char gammaCoverage(unsigned char coverage) {
+      static const std::array<unsigned char, 256> kCurve = [] {
+        std::array<unsigned char, 256> table {};
+        for (int i = 0; i < 256; ++i)
+          table[i] = static_cast<unsigned char>(std::lround(255.0 * std::pow(i / 255.0, 1.0 / 1.45)));
+        return table;
+      }();
+      return kCurve[coverage];
+    }
+
     void rasterizeGlyph(char32_t character, const PackedGlyph* packed_glyph) {
       int size = packed_glyph->width * packed_glyph->height;
       if (size == 0)
@@ -192,7 +212,7 @@ namespace visage {
         for (int y = 0; y < height; ++y) {
           const unsigned char* row = bitmap.buffer + y * bitmap.pitch;
           for (int x = 0; x < width; ++x) {
-            unsigned char value = mono ? ((row[x / 8] >> (7 - x % 8)) & 1) * 0xff : row[x];
+            unsigned char value = mono ? ((row[x / 8] >> (7 - x % 8)) & 1) * 0xff : gammaCoverage(row[x]);
             texture[y * packed_glyph->width + x] = value * 0x01010101u;
           }
         }
