@@ -49,6 +49,17 @@ namespace visage {
     return renderer;
   }
 
+  Renderer::FrameStats Renderer::frameStats() {
+    const gpu::Stats* stats = gpu::getStats();
+    FrameStats result;
+    result.draw_calls = stats->num_draws;
+    result.computes = stats->num_computes;
+    result.views = stats->num_views;
+    result.cpu_ms = stats->cpu_frame_ms;
+    result.gpu_ms = stats->gpu_frame_ms;
+    return result;
+  }
+
   void Renderer::initialize(void* model_window, void* display, bool wayland_display) {
     if (display_ == nullptr) {
       display_ = display;

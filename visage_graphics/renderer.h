@@ -37,6 +37,19 @@ namespace visage {
       ~Reference() { Renderer::instance().removeReference(); }
     };
 
+    // What the last gpu frame submitted, for a host that reports its own frame costs. The GPU layer
+    // is internal, so this is the public window onto its counters. Process-wide: with several
+    // canvases it describes whichever one submitted last. gpu_ms is 0 where the backend keeps no
+    // GPU timer (D3D11 and Vulkan, today).
+    struct FrameStats {
+      int draw_calls = 0;
+      int computes = 0;
+      int views = 0;
+      double cpu_ms = 0.0;
+      double gpu_ms = 0.0;
+    };
+    static FrameStats frameStats();
+
     static Renderer& instance();
 
     void initializeWindowless() { initialize(nullptr, nullptr, false); }
