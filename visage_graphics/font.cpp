@@ -346,7 +346,20 @@ namespace visage {
   Font::Font(float size, const PackedFont* packed_font, float dpi_scale) :
       size_(size), dpi_scale_(dpi_scale) {
     native_size_ = std::round(size * (dpi_scale ? dpi_scale : 1.0f));
-    packed_font_ = FontCache::loadPackedFont(native_size_, packed_font);
+
+    // A PackedFont IS a face at a rasterised size -- that pair is literally its cache key -- so
+    // when the rasterised size has not moved, the face already held is the answer and another
+    // reference to it is the whole job. Going round through the cache to arrive at the same
+    // pointer costs building that key, which is a concatenation and a std::to_string, and then
+    // several lookups in a map keyed by the resulting string.
+    //
+    // This is the common case rather than a corner of one: Canvas::text calls withDpiScale, which
+    // comes through here, on every string it draws, and the DPI does not change between two
+    // strings in a frame.
+    if (packed_font && packed_font->size() == native_size_)
+      packed_font_ = FontCache::loadPackedFont(packed_font);
+    else
+      packed_font_ = FontCache::loadPackedFont(native_size_, packed_font);
   }
 
   Font::Font(const Font& other) {
@@ -584,7 +597,7 @@ namespace visage {
   PackedFont* FontCache::loadPackedFont(const PackedFont* packed_font) {
     if (packed_font == nullptr)
       return nullptr;
-    return instance()->incrementPackedFont(packed_font->id());
+    return instance()->incrementPackedFont(const_cast<PackedFont*>(packed_font));
   }
 
   PackedFont* FontCache::loadPackedFont(int size, const PackedFont* packed_font) {
@@ -606,6 +619,11 @@ namespace visage {
   PackedFont* FontCache::incrementPackedFont(const std::string& id) {
     ref_count_[cache_[id].get()]++;
     return cache_[id].get();
+  }
+
+  PackedFont* FontCache::incrementPackedFont(PackedFont* packed_font) {
+    ref_count_[packed_font]++;
+    return packed_font;
   }
 
   FontCache::TypeFaceData FontCache::storedTypeFaceData(const unsigned char* data, int data_size) {

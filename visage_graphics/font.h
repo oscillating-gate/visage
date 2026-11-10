@@ -202,6 +202,11 @@ namespace visage {
     FontCache();
 
     PackedFont* incrementPackedFont(const std::string& id);
+    // The same, for a face already in hand. Every Font copy takes another reference to the face it
+    // is copying, and ref_count_ is keyed by the pointer -- so looking that pointer back up by its
+    // string key, in a string-keyed map, to arrive where it started is work with no result. Copies
+    // happen once per text draw and then some, which is what makes it worth an overload.
+    PackedFont* incrementPackedFont(PackedFont* packed_font);
     TypeFaceData storedTypeFaceData(const unsigned char* data, int data_size);
     PackedFont* createOrLoadPackedFont(const std::string& type_face_id, int size,
                                        const unsigned char* font_data, int data_size);
